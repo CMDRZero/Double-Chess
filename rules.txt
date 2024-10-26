@@ -1,0 +1,25 @@
+Cannot check and then capture in 1 turn, once you check, end turn.
+
+
+Rules:
+ - A turn is a set of moves.
+ - A move is one piece movement.
+ - Standard setup
+ - White goes first and makes one move.
+ - Play continues with black and all subsequent players make two moves in a row as one turn
+ - You cannot end your turn if the opponent can capture your king on their turn (See check)
+ - If on your first move you place your opponent's king in check, cede the rest of your turn. / Checking ends your turn.
+ - You cannot move your king into check ever.
+ - You may leave your king in check.
+ - You cannot castle while in check, nor through or into check.
+ - When a pawn double jumps, the tile it skips is marked as enpassant. If a pawn can capture an enpassant tile, capture the pawn that jumped as well.
+ - If you move the double jumped pawn, remove its enpassant flag.
+ - On the end of your turn, clear your opponents enpassant flags.
+ - The two moves must net in something
+ - Cannot end a sub turn in check by moving a non king piece
+
+ - If you have no legal moves and are in check, checkmate, you lose
+ - If you have no legal moves and are not in check, stalemate,
+
+Check:
+ - Check is defined as the opponent being able to capture the king, meaning that on their first move they can take king.

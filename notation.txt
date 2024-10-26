@@ -1,0 +1,14 @@
+A standard board has the following indexation:
+
+
+  77 76 75 74 73 72 71 70
+  67 66 65 64 63 62 61 60
+             .
+             .
+             .
+  17 16 15 14 13 12 11 10
+  07 06 05 04 03 02 01 00
+
+This is because in my head higher bits go onto and to the left.
+This is only for whites side however, and black as inverted ordering.
+Also note this means a u6 can represent the full position and is y ++ x;
