@@ -193,11 +193,6 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
 pub fn LegalMoves(game: *Board) !Vec(Move) {
     ComputeCheckTiles(game);
     return RawDoubles(game.*);
-    // var moves = Vec(Move).init(alloc);
-    // for ((try RawSingleMoves(game)).items) |singlemove| {
-    //     try moves.append(Move{.first = singlemove, .second = null});
-    // }
-    // return moves;
 }
 
 fn RawDoubles(game: Board) !Vec(Move) {
@@ -222,6 +217,7 @@ fn RawDoubles(game: Board) !Vec(Move) {
             if (temp.attackers & temp.boards[kingID] != 0) { //Cannot end in check
                 continue;
             }
+            if (std.meta.eql(game, temp)) continue; //Cannot have a net nothing move;
             try moves.append(Move{.first = firstmov, .second = secmove});
         }
     }
