@@ -46,15 +46,34 @@ pub const Move = struct {
 };
 
 pub const SingleMove = struct {
+    flags: MoveFlag,
     piece: Piece,
     promotion: ?Piece = null,
     from: u6,
     to: u6,
 };
 
-pub const CompactMove = struct {
+pub const CompactMove = packed struct (u16) {
+    flags: MoveFlag,
     from: u6,
     to: u6,
+};
+
+pub const MoveFlag = enum (u4) {
+    quiet = 0,
+    doublejump = 1,
+    kingcastle = 2,
+    queencastle = 3,
+    capture = 4,
+    en_capture = 5,
+    prom_knight = 8,
+    prom_bishop = 9,
+    prom_rook = 10,
+    prom_queen = 11,
+    cap_prom_knight = 12,
+    cap_prom_bishop = 13,
+    cap_prom_rook = 14,
+    cap_prom_queen = 15,
 };
 
 pub const SparseBoard = struct {

@@ -54,12 +54,12 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
             if (mode == .rawmoves) {
                 temp = Forwards(ohpos, playID);    //Start with just a normal move forwards
                 if (temp & blocks == 0) {
-                    try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece});
+                    try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece, .flags = .quiet});
                     try HandlePromotions(&moves);
                     if (GetY(pos) == @as(u3, if (playID == 0) 1 else 6)) {   //White can double jump on itial rank (1) and black on initial rank (6)
                         temp = Forwards(temp, playID);                      //Try double jump
                         if (temp & blocks == 0) {
-                            try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece});
+                            try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece, .flags = .doublejump});
                             //You never promote from a double move
                         }
                     }
@@ -71,7 +71,7 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
                 temp = Forwards(ohpos, playID) << 1;     //Forwards and towards A rank
                 if (mode == .setattackers) game.attackers |= temp;
                 if (temp & pawncap != 0) {
-                    if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece});
+                    if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece, .flags = .capture});
                     if (mode == .rawmoves) try HandlePromotions(&moves);
                 }
             }
@@ -80,7 +80,7 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
                 temp = Forwards(ohpos, playID) >> 1;     //Forwards and towards H rank
                 if (mode == .setattackers) game.attackers |= temp;
                 if (temp & pawncap != 0) {
-                    if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece});
+                    if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = bits.LogHSB(temp), .piece = piece, .flags = .capture});
                     if (mode == .rawmoves) try HandlePromotions(&moves);
                 }
             }
@@ -102,7 +102,11 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
             while (rms != 0) : (rms ^= one << rdest) {
                 if (mode == .setattackers) game.attackers |= rms;
                 rdest = bits.LogHSB(rms);
-                if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece});
+                
+                if (mode == .rawmoves) {
+                    const flag: board.MoveFlag = if (rms & enemies != 0) .capture else .quiet;
+                    try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece, .flags = flag});
+                }
             } 
         }
     }
@@ -121,7 +125,10 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
             while (rms != 0) : (rms ^= one << rdest) {
                 if (mode == .setattackers) game.attackers |= rms;
                 rdest = bits.LogHSB(rms);
-                if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece});
+                if (mode == .rawmoves) {
+                    const flag: board.MoveFlag = if (rms & enemies != 0) .capture else .quiet;
+                    try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece, .flags = flag});
+                }
             } 
         }
     }
@@ -141,7 +148,10 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
             while (rms != 0) : (rms ^= one << rdest) {
                 if (mode == .setattackers) game.attackers |= rms;
                 rdest = bits.LogHSB(rms);
-                if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece});
+                if (mode == .rawmoves) {
+                    const flag: board.MoveFlag = if (rms & enemies != 0) .capture else .quiet;
+                    try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece, .flags = flag});
+                }
             } 
         }
     }
@@ -160,7 +170,10 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
             while (rms != 0) : (rms ^= one << rdest) {
                 if (mode == .setattackers) game.attackers |= rms;
                 rdest = bits.LogHSB(rms);
-                if (mode == .rawmoves) try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece});
+                if (mode == .rawmoves) {
+                    const flag: board.MoveFlag = if (rms & enemies != 0) .capture else .quiet;
+                    try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece, .flags = flag});
+                }
             } 
         }
     }
@@ -181,7 +194,8 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
                 mov = one << rdest;
                 if (mode == .setattackers) game.attackers |= rms;
                 if (mode == .rawmoves and mov & game.attackers == 0) {
-                    try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece});
+                    const flag: board.MoveFlag = if (rms & enemies != 0) .capture else .quiet;
+                    try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece, .flags = flag});
                 }
             } 
         }
@@ -193,6 +207,10 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
 pub fn LegalMoves(game: *Board) !Vec(Move) {
     ComputeCheckTiles(game);
     return RawDoubles(game.*);
+}
+
+pub fn ReadLegalMoves(game: Board) !Vec(Move) {
+    return RawDoubles(game);
 }
 
 fn RawDoubles(game: Board) !Vec(Move) {
@@ -326,6 +344,17 @@ pub fn ApplyMove(game: *Board, move: SingleMove) void {
     if (qdid) |did| {
         game.boards[did.Int()] ^= one << move.to;
     }
+    if (move.promotion) |prom| {
+        game.boards[pid] ^= one << move.to;
+        game.boards[prom.Int()] ^= one << move.to;
+        
+    }
+    
+}
+
+pub fn ApplyTurn(game: *Board, move: Move) void {
+    ApplyMove(game, move.first);
+    if (move.second) |smove| ApplyMove(game, smove);
 }
 
 inline fn Forwards(val: u64, dir: u4) u64 {

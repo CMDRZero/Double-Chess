@@ -120,7 +120,8 @@ pub fn Handle(sboard: *board.SparseBoard, rawmoves: Vec(board.Move), orientation
                     tiles[selected] = .highlight;
                     if (substep == 0){
                         substep = 1;
-                        fmov = board.SingleMove{ .from = selected, .to = cell, .piece = psel};
+                        for (moves.items) |move| {if (move.from == selected and move.to == cell) {fmov = move; break;}}
+                        //fmov = board.SingleMove{ .from = selected, .to = cell, .piece = psel};
                         engine.ApplyMove(sboard, fmov);
                         engine.ComputeCheckTiles(sboard);
                         for (rawmoves.items) |rawmove| {if (std.meta.eql(rawmove.first, fmov) and rawmove.second != null) break;} 
@@ -132,13 +133,14 @@ pub fn Handle(sboard: *board.SparseBoard, rawmoves: Vec(board.Move), orientation
                         
                     } else {
                         substep = 0;
-                        return board.Move {.first = fmov, .second = board.SingleMove{ .from = selected, .to = cell, .piece = psel}};
+                        var nmove: board.SingleMove = undefined;
+                        for (moves.items) |move| {if (move.from == selected and move.to == cell) {nmove = move; break;}}
+                        return board.Move {.first = fmov, .second = nmove};
                     }
                 }
             }
         }
     }
-
     return null;
 }
 

@@ -18,6 +18,8 @@ Rules:
  - The two moves must net in something
  - Cannot end a sub turn in check by moving a non king piece
 
+ - Add three fold repeition and 50 move rule.
+
  - If you have no legal moves and are in check, checkmate, you lose
  - If you have no legal moves and are not in check, stalemate,
 

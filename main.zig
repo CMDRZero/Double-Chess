@@ -9,6 +9,8 @@ const player = @import("player.zig");
 const engine = @import("engine.zig");
 pub const UNICODE = true;
 
+const bot = @import("simplebot.zig");
+
 const state = enum {
     animating,
     processing,
@@ -20,8 +22,10 @@ const agent = union (enum) {
 };
 
 const agents: [2] agent = .{
-    .player,
-    .player,
+    .{.player = {}},
+    //.{.cpu = bot.Compute},
+    //.{.player = {}},
+    .{.cpu = bot.Compute},
 };
 
 const MoveGenerator = * const fn (board.SparseBoard) board.Move;
@@ -65,6 +69,7 @@ pub fn main() !void {
             },
             .cpu  => |Compute| {
                 qmove = Compute(game);
+                std.time.sleep(900 * std.time.ns_per_ms);
             },
         }
         if (qmove) |move|{
@@ -80,7 +85,7 @@ pub fn main() !void {
         try bmap.RenderBoard(&stdout);
         std.debug.print("Iter: {}\n", .{it});
         std.debug.print("Players turn is {}\n", .{game.currentPlayer});
-        std.time.sleep(10 * std.time.ns_per_ms);
+        std.time.sleep(5 * std.time.ns_per_ms);
     }
     std.debug.print("Program exited\n", .{});
 }
