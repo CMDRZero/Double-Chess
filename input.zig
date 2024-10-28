@@ -9,7 +9,7 @@ pub var input_records: [128]console.INPUT_RECORD = undefined;
 
 pub fn ReadInput(stdin: *anyopaque) !u32 {
     var num_events_read: u32 = 0;
-    std.debug.print("\x1b[6n", .{});
+    //std.debug.print("\x1b[6n", .{});
     const result = console.ReadConsoleInput(
         stdin,                          // Handle to the console input buffer
         &input_records,                 // Pointer to the buffer to receive the input records

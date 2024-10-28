@@ -22,11 +22,13 @@ const agent = union (enum) {
 };
 
 const agents: [2] agent = .{
-    .{.player = {}},
-    //.{.cpu = bot.Compute},
     //.{.player = {}},
     .{.cpu = bot.Compute},
+    .{.player = {}},
+    //.{.cpu = bot.Compute},
 };
+
+const botdelayms = 650;
 
 const MoveGenerator = * const fn (board.SparseBoard) board.Move;
 
@@ -52,34 +54,65 @@ pub fn main() !void {
     const orient: board.Orientation = .aswhite;
     var it: u64 = 0;
     var moves: std.ArrayList(board.Move) = try engine.LegalMoves(&game);
+    var madeMode: bool = false;
     
     main: while (true) : (it += 1) {
-        //const moves = try engine.LegalMoves(game);
-        //const moves = try engine.RawSingleMoves(game);
-        
         bmap.DrawCells(tiles, orient);
+        bmap.DrawCastleRights(game, orient);
         game.DrawBoard(&bmap, orient);
 
         const curragent = agents[@intFromEnum(game.currentPlayer)];
-        var qmove: ?board.Move = null;
         switch (curragent) {
             .player => {
-                qmove = player.Handle(&game, moves, orient, &tiles) catch break: main;
+                const qmove = player.Handle(&game, moves, orient, &tiles) catch break: main;
+                if (qmove) |move|{
+                    game = gamecopy;
+                    engine.ApplyMove(&game, move.first);
+                    if (move.second) |smove| engine.ApplyMove(&game, smove);
+                    madeMode = true;
+                }
                 //Ask the player handler for input, quit if they throw an error
             },
             .cpu  => |Compute| {
-                qmove = Compute(game);
-                std.time.sleep(900 * std.time.ns_per_ms);
+                const move = Compute(game);
+                std.time.sleep(botdelayms * std.time.ns_per_ms);
+                player.ResetTiles(&tiles);
+                engine.ApplyMove(&game, move.first);
+                tiles[move.first.from] = .highlight;
+                tiles[move.first.to] = .highlight;
+                bmap.DrawCells(tiles, orient);
+                bmap.DrawCastleRights(game, orient);
+                game.DrawBoard(&bmap, orient);
+                try bmap.RenderBoard(&stdout);
+                std.time.sleep(botdelayms * std.time.ns_per_ms);
+                if (move.second) |smove| {
+                    engine.ApplyMove(&game, smove);
+                    tiles[smove.from] = .highlight;
+                    tiles[smove.to] = .highlight;
+                }
+                bmap.DrawCells(tiles, orient);
+                bmap.DrawCastleRights(game, orient);
+                game.DrawBoard(&bmap, orient);
+                try bmap.RenderBoard(&stdout);
+                madeMode = true;
             },
         }
-        if (qmove) |move|{
-            game = gamecopy;
-            engine.ApplyMove(&game, move.first);
-            if (move.second) |smove| engine.ApplyMove(&game, smove);
+        if (madeMode){
+            madeMode = false;
             game.NextMove();
-            gamecopy = game;
             moves = try engine.LegalMoves(&game);
+            if (moves.items.len == 0){
+                try bmap.RenderBoard(&stdout);
+                if (game.inCheck) {
+                    game.NextMove();
+                    std.debug.print("{s} wins by checkmate.\n", .{@tagName(game.currentPlayer)});
+                } else {
+                    std.debug.print("Stalemate.\n", .{});
+                }
+                break: main;
+            }
             player.ack = false;
+            gamecopy = game;
         }
 
         try bmap.RenderBoard(&stdout);

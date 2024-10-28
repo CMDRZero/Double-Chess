@@ -144,7 +144,7 @@ pub fn Handle(sboard: *board.SparseBoard, rawmoves: Vec(board.Move), orientation
     return null;
 }
 
-fn ResetTiles(tiles: *board.Tileboard) void {
+pub fn ResetTiles(tiles: *board.Tileboard) void {
     for(0..64) |ind| {
         tiles[@intCast(ind)] = .normal;
     }

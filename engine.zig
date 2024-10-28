@@ -18,6 +18,8 @@ pub inline fn RawSingleMoves(game: Board) !Vec(SingleMove) {
 
 pub inline fn ComputeCheckTiles(game: *Board) void {
     CompMoves(.setattackers, game);
+    const kID = 10 + @as(u4, game.currentPlayer.Int());
+    game.inCheck = game.attackers & game.boards[kID] != 0;
 }
 
 pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode == .rawmoves) Board else *Board) if (mode == .rawmoves) anyerror!Vec(SingleMove) else void {
@@ -198,6 +200,13 @@ pub fn CompMoves(comptime mode: enum {rawmoves, setattackers}, game: if (mode ==
                     try moves.append( SingleMove{.from = pos, .to = rdest, .piece = piece, .flags = flag});
                 }
             } 
+        if (mode == .rawmoves and mov & game.attackers == 0) {
+            const mpos = (game.boards[pieceID] >> 1) | (game.boards[pieceID] >> 2);
+            if (game.kingcastle[playID] and mpos & (game.attackers | blocks) == 0) {
+                const logKPos = bits.LogHSB(game.boards[pieceID]);
+                try moves.append( SingleMove{.from = logKPos, .to = logKPos - 2, .piece = piece, .flags = .kingcastle});
+            }
+        }
         }
     }
     
@@ -229,6 +238,11 @@ fn RawDoubles(game: Board) !Vec(Move) {
                 try moves.append(Move{.first = firstmov, .second = null}); //Add this as a legal single move
                 break;  //Stop checking new moves on this branch
             };
+            if (game.firstmove) {
+                moves.shrinkRetainingCapacity(currlength); //Abort all current moves because that was check
+                try moves.append(Move{.first = firstmov, .second = null}); //Add this as a legal single move
+                break;  //Stop checking new moves on this branch
+            }
             var temp = newgame;
             ApplyMove(&temp, secmove);
             ComputeCheckTiles(&temp);
@@ -337,17 +351,35 @@ fn GenerateKnightMoves(pos: u6) Bitboard {
 }
 
 pub fn ApplyMove(game: *Board, move: SingleMove) void {
-    const pid = move.piece.Int();
-    const qdid = game.PieceFromPos(move.to);
-    game.boards[pid] ^= one << move.from;
-    game.boards[pid] ^= one << move.to;
-    if (qdid) |did| {
-        game.boards[did.Int()] ^= one << move.to;
+    if (move.piece.piece == .king){
+        game.kingcastle[move.piece.color.Int()] = false;
+        game.queencastle[move.piece.color.Int()] = false;
     }
-    if (move.promotion) |prom| {
+    if (move.from == 0o00 or move.to == 0o00) game.kingcastle[0] = false; //If something moves to or from A8, white loses king castle
+    if (move.from == 0o07 or move.to == 0o07) game.queencastle[0] = false; //If something moves to or from A1, white loses queen castle
+    if (move.from == 0o70 or move.to == 0o70) game.kingcastle[1] = false; //If something moves to or from H8, black loses king castle
+    if (move.from == 0o77 or move.to == 0o77) game.queencastle[1] = false; //If something moves to or from H1, black loses queen castle
+    
+    if (move.piece.piece == .king and move.from == 3 and move.to == 1){
+        game.boards[(Piece{.color = .white, .piece = .king}).Int()] >>= 2; //Double jump right
+        game.boards[(Piece{.color = .white, .piece = .rook}).Int()] ^= one;
+        game.boards[(Piece{.color = .white, .piece = .rook}).Int()] ^= one << 2; 
+    } else if (move.piece.piece == .king and move.from == 59 and move.to == 57){
+        game.boards[(Piece{.color = .black, .piece = .king}).Int()] >>= 2; //Double jump right
+        game.boards[(Piece{.color = .black, .piece = .rook}).Int()] ^= one << (7*8);
+        game.boards[(Piece{.color = .black, .piece = .rook}).Int()] ^= one << (7*8 + 2); 
+    } else {
+        const pid = move.piece.Int();
+        const qdid = game.PieceFromPos(move.to);
+        game.boards[pid] ^= one << move.from;
         game.boards[pid] ^= one << move.to;
-        game.boards[prom.Int()] ^= one << move.to;
-        
+        if (qdid) |did| {
+            game.boards[did.Int()] ^= one << move.to;
+        }
+        if (move.flags.GetPromotion(move.piece.color)) |prom| {
+            game.boards[pid] ^= one << move.to;
+            game.boards[prom.Int()] ^= one << move.to;
+        }
     }
     
 }
@@ -369,13 +401,13 @@ inline fn PosForwards(val: u6, dir: u4) u6 {
 fn HandlePromotions(moves: *Vec(SingleMove)) !void {
     const recent = moves.items[moves.items.len - 1];
     if (recent.to >> 3 == 0 or recent.to & 0o10 == 7) { //If a pawn somehow ends up on the first or last rank, its promoted
-        moves.items[moves.items.len - 1].promotion = Piece{.piece = .queen, .color = recent.piece.color};
+        moves.items[moves.items.len - 1].flags.AddPromotion(.queen);
         var tempmove = recent;
-        tempmove.promotion = Piece{.piece = .rook, .color = recent.piece.color};
+        tempmove.flags.AddPromotion(.rook);
         try moves.append(tempmove);
-        tempmove.promotion = Piece{.piece = .knight, .color = recent.piece.color};
+        tempmove.flags.AddPromotion(.knight);
         try moves.append(tempmove);
-        tempmove.promotion = Piece{.piece = .bishop, .color = recent.piece.color};
+        tempmove.flags.AddPromotion(.bishop);
         try moves.append(tempmove);
     }
 }

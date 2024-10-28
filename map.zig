@@ -5,8 +5,8 @@ pub const term = @import("term.zig");
 pub const board = @import("board.zig");
 
 pub const bitshape = std.meta.Int(.unsigned, 13*13);
-const bwidth = 5 + 2 + 13 * 8 + 2;
-const bheight = bwidth;
+const bheight = 5 + 2 + 13 * 8 + 2;
+const bwidth = bheight + 13 + 2 + 13 + 5 + 13 + 5 + 13;
 pub const Board = [bheight][bwidth] u4;
 
 const Color = color.Color;
@@ -185,6 +185,48 @@ pub const Map = struct {
             }
         }
     }
+
+    pub fn DrawCastleRights(self: *Self, game: board.SparseBoard, orient: board.Orientation) void {
+        const wYcol: u16 = if (orient == .aswhite) 7 + 13 * 7 else 7;
+        const bYcol: u16 = if (orient == .asblack) 7 + 13 * 7 else 7;
+        var rights: [2][2] bool = undefined;
+        if (orient == .aswhite) {rights = .{game.queencastle, game.kingcastle};} //Queen on left, king on right
+        else {rights = .{game.queencastle, game.kingcastle};}
+        
+        const lrookpos = 7 + 13 * 8 + 2 + 13; //Right edge plus 13 so we can fit in promotions
+        for (lrookpos .. lrookpos + 13 * 3 + 5 * 2) |x|{
+            for (0 .. 13) |y|{
+                self.backer[wYcol + y][x] = 0;
+                self.backer[bYcol + y][x] = 0;
+            }
+        }
+        
+        if (game.currentPlayer == .white and game.inCheck) self.WriteSquare(13, ~@as(bitshape, 0), 0xB, lrookpos + 13 + 5, wYcol);
+        self.WriteSquare(13, kingshape, 5, lrookpos + 13 + 5, wYcol);
+        if (rights[0][0] or rights[1][0]) {
+            if (rights[0][0]) {
+                self.WriteSquare(13, rookshape, 5, lrookpos, wYcol);
+                self.WriteSquare(5, _l_arrow_shape, 5, lrookpos + 13, wYcol + 4);
+            }
+            if (rights[1][0]) {
+                self.WriteSquare(5, _r_arrow_shape, 5, lrookpos + 13 + 5 + 13, wYcol + 4);
+                self.WriteSquare(13, rookshape, 5, lrookpos + 13 + 5 + 13 + 5, wYcol);
+            }
+        }
+        
+        if (game.currentPlayer == .black and game.inCheck) self.WriteSquare(13, ~@as(bitshape, 0), 0xB, lrookpos + 13 + 5, bYcol);
+        self.WriteSquare(13, kingshape, 4, lrookpos + 13 + 5, bYcol);
+        if (rights[0][1] or rights[1][1]) {
+            if (rights[0][1]) {
+                self.WriteSquare(13, rookshape, 4, lrookpos, bYcol);
+                self.WriteSquare(5, _l_arrow_shape, 4, lrookpos + 13, bYcol + 4);
+            }
+            if (rights[1][1]) {
+                self.WriteSquare(5, _r_arrow_shape, 4, lrookpos + 13 + 5 + 13, bYcol + 4);
+                self.WriteSquare(13, rookshape, 4, lrookpos + 13 + 5 + 13 + 5, bYcol);
+            }
+        }
+    } 
 
     pub fn DrawStatics(self: *Self) void {
         self.DrawEdge(15);
@@ -555,5 +597,20 @@ pub const _8_shape = ToTinyBitMap(
 \\. █▀█ .
 \\. █▀█ .
 \\. ▀▀▀ .
+\\
+);
+
+
+pub const _l_arrow_shape = ToTinyBitMap(
+\\. ▄█  .
+\\.▀██▀▀.
+\\.  ▀  .
+\\
+);
+
+pub const _r_arrow_shape = ToTinyBitMap(
+\\.  █▄ .
+\\.▀▀██▀.
+\\.  ▀  .
 \\
 );

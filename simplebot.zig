@@ -9,6 +9,8 @@ pub fn Compute(game: board.SparseBoard) board.Move {
     for (moves.items) |move| {
         var temp = game;
         engine.ApplyTurn(&temp, move);
+        temp.NextMove();
+        engine.ComputeCheckTiles(&temp);
         const nval = Valuate(temp);
         if (nval > value){
             value = nval;
@@ -24,8 +26,9 @@ fn Valuate(game: board.SparseBoard) i32 {
     const values = [5]i32 {1_000, 5_000, 4_000, 3_000, 9_000};
     var val: i32 = 0;
     for (0..5) |idx| {
-        val += values[idx] * @popCount(game.boards[2 * idx + playID]);
-        val -= values[idx] * @popCount(game.boards[2 * idx + convID]);
+        val -= values[idx] * @popCount(game.boards[2 * idx + playID]);
+        val += values[idx] * @popCount(game.boards[2 * idx + convID]);
     }
+    if (game.inCheck) val += 2_500;
     return val;
 }

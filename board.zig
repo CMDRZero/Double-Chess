@@ -13,6 +13,7 @@ pub const Orientation = enum {
 pub const Color = enum(u1) {
     white,
     black,
+    pub inline fn Int(self: Color) u1 {return @intFromEnum(self);}
 };
 
 pub const Piece = packed struct(u4) {
@@ -48,7 +49,6 @@ pub const Move = struct {
 pub const SingleMove = struct {
     flags: MoveFlag,
     piece: Piece,
-    promotion: ?Piece = null,
     from: u6,
     to: u6,
 };
@@ -66,14 +66,28 @@ pub const MoveFlag = enum (u4) {
     queencastle = 3,
     capture = 4,
     en_capture = 5,
-    prom_knight = 8,
-    prom_bishop = 9,
-    prom_rook = 10,
+    prom_rook = 8,
+    prom_knight = 9,
+    prom_bishop = 10,
     prom_queen = 11,
-    cap_prom_knight = 12,
-    cap_prom_bishop = 13,
-    cap_prom_rook = 14,
+    cap_prom_rook = 12,
+    cap_prom_knight = 13,
+    cap_prom_bishop = 14,
     cap_prom_queen = 15,
+
+    pub inline fn Int(self: @This()) u4 {return @intFromEnum(self);}
+
+    pub fn GetPromotion(self: @This(), color: Color) ?Piece {
+        if (self.Int() & 0b1000 != 0){
+            return Piece{.piece = @enumFromInt((self.Int() & 7) + 1), .color = color};
+        } else {
+            return null;
+        }
+    }
+
+    pub fn AddPromotion(self: *@This(), piece: Piecetype) void {
+        self.* = @enumFromInt(self.Int() | 0b1000 | (@intFromEnum(piece) - 1));
+    }
 };
 
 pub const SparseBoard = struct {
@@ -94,11 +108,10 @@ pub const SparseBoard = struct {
 
     enpassant: BitBoard = 0,
     attackers: BitBoard = 0x00_00_FF_FF_00_00_00_00,
-    whitekingcastle: bool = true,
-    whitequeencastle: bool = true,
-    blackkingcastle: bool = true,
-    blackqueencastle: bool = true,
+    kingcastle: [2] bool = .{true, true},
+    queencastle: [2] bool = .{true, true},
     currentPlayer: Color = .white,
+    inCheck: bool = false,
     firstmove: bool = true,
 
     const Self = @This();
